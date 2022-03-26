@@ -20,6 +20,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final textDetector = GoogleMlKit.vision.textDetector();
   final barcodeScanner = GoogleMlKit.vision.barcodeScanner();
   final imageLabeler = GoogleMlKit.vision.imageLabeler();
+  late List<String> labelList;
+  late List<TextSpan> LabelsTextSpan = [];
 
   Future<bool> _pickImage() async {
     setState(() => this._imageFile = null);
@@ -69,8 +71,37 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final RecognisedText recognisedText = await textDetector
           .processImage(InputImage.fromFile(this._imageFile!));
+
       setState(() {
         this.extractedText = recognisedText.text;
+      });
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future imageLabelling() async {
+    try {
+      await _pickImage();
+      if (this._imageFile == null) return;
+
+      final List<ImageLabel> labels = await imageLabeler
+          .processImage(InputImage.fromFile(this._imageFile!));
+
+      final List<String> _labels = [''];
+
+      for (ImageLabel label in labels) {
+        final String text = label.label;
+        _labels.add(label.label);
+        final int index = label.index;
+        final double confidence = label.confidence;
+        this.LabelsTextSpan.add(TextSpan(
+            text: '${label.label}, ', style: TextStyle(color: Colors.black)));
+
+        print(text);
+      }
+      setState(() {
+        this.labelList = _labels;
       });
     } catch (e) {
       print(e);
@@ -89,6 +120,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final Rect boundingBox = barcode.value.boundingBox!;
         final String displayValue = barcode.value.displayValue!;
         final String rawValue = barcode.value.rawValue!;
+
+        this.setState(() {
+          this.extractedText = barcode.value.displayValue!;
+        });
 
         print('Display value: $displayValue');
         print('Raw value: $rawValue');
@@ -148,28 +183,27 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text('ML Kits'),
       ),
-      body:
-          Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Flexible(
-          flex: 4,
-          child: Container(
-            margin: EdgeInsets.all(5),
-            child: Column(
-              children: [
-                this._imageFile == null
-                    ? Container(
-                        height: 200,
-                        color: Colors.grey,
-                      )
-                    : Container(
-                        child: FadeInImage(
-                          fit: BoxFit.cover,
-                          placeholder: MemoryImage(kTransparentImage),
-                          image: FileImage(this._imageFile!),
-                        ),
-                        height: 200,
+      body: ListView(children: [
+        Container(
+          margin: EdgeInsets.all(5),
+          child: Column(
+            children: [
+              this._imageFile == null
+                  ? Container(
+                      height: 200,
+                      color: Colors.grey,
+                    )
+                  : Container(
+                      child: FadeInImage(
+                        fit: BoxFit.cover,
+                        placeholder: MemoryImage(kTransparentImage),
+                        image: FileImage(this._imageFile!),
                       ),
-                Row(
+                      height: 200,
+                    ),
+              Container(
+                margin: EdgeInsets.only(top: 10),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton(
@@ -177,39 +211,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       onPressed: () => extractText(),
                     ),
                     ElevatedButton(
-                      child: Text('Barcode Scanner'),
+                      child: Text('Code QR'),
                       onPressed: () => scanBarCode(),
                     ),
                     ElevatedButton(
                       child: Text('Image Labelling'),
-                      onPressed: () => {print('Hello')},
+                      onPressed: () => imageLabelling(),
                     )
                   ],
-                )
-              ],
-            ),
+                ),
+              )
+            ],
           ),
         ),
-        Flexible(
-            child: Container(
-              padding: EdgeInsets.only(top: 10),
-              width: MediaQuery.of(context).size.width,
-              decoration: BoxDecoration(color: Colors.black),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Resultat: ',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  Text(
-                    this.extractedText,
-                    style: TextStyle(color: Colors.white),
-                  )
-                ],
-              ),
-            ),
-            flex: 6)
+        Container(
+            padding: EdgeInsets.only(top: 10),
+            // width: MediaQuery.of(context).size.width,
+            child: Center(
+                child: RichText(
+              text: TextSpan(
+                  text: this.extractedText,
+                  children: LabelsTextSpan.length > 0 ? LabelsTextSpan : null,
+                  style: TextStyle(color: Colors.black)),
+              textAlign: TextAlign.justify,
+            ))),
       ]),
     );
   }
