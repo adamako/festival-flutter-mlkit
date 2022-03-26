@@ -95,9 +95,10 @@ class _HomeScreenState extends State<HomeScreen> {
         _labels.add(label.label);
         final int index = label.index;
         final double confidence = label.confidence;
-        this.LabelsTextSpan.add(TextSpan(
-            text: '${label.label}, ', style: TextStyle(color: Colors.black)));
-
+        this.setState(() {
+          this.LabelsTextSpan.add(TextSpan(
+              text: '${label.label}, ', style: TextStyle(color: Colors.black)));
+        });
         print(text);
       }
       setState(() {
@@ -232,7 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
               text: TextSpan(
                   text: this.extractedText,
                   children: LabelsTextSpan.length > 0 ? LabelsTextSpan : null,
-                  style: TextStyle(color: Colors.black)),
+                  style: TextStyle(color: Colors.black, fontSize: 30)),
               textAlign: TextAlign.justify,
             ))),
       ]),
